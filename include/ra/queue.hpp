@@ -43,7 +43,22 @@ public:
 			storage.pop();
 	}
 
-	status push( value_type&& x );
+	status push( value_type&& x ){
+		// Take the mutex
+		std::unique_lock halt(qutex);
+
+		// Sleep the thread until there is room to push
+		// something into the queue
+		full_q.wait(halt, [this](){return size < capacity;});
+
+		// Do the operation
+		storage.emplace(x);
+
+		// Update size
+		++size;
+
+		return status::success;
+	}
 
 	status pop( value_type& x );
 
@@ -61,6 +76,8 @@ public:
 
 private:
 	std::mutex qutex;
+	std::condition_variable full_q;
+	std::condition_variable empty_q;
 	std::queue<value_type> storage;
 	bool closed;
 	size_type size;
