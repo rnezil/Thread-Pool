@@ -1,4 +1,3 @@
-#include <threads>
 #include <cstddef>
 #include <mutex>
 #include <queue>
@@ -136,7 +135,7 @@ public:
 
 
 
-	bool is_full() const; { return storage.size() == capacity; }
+	bool is_full() const { return storage.size() == capacity; }
 
 	bool is_empty() const { return storage.size() == 0; }
 
