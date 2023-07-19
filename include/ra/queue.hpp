@@ -48,9 +48,12 @@ public:
 			// Take the mutex
 			std::unique_lock halt(qutex);
 
-			// Sleep the thread until there is room to push
-			// something into the queue
-			pushreq.wait(halt, [this](){return is_closed() || !is_full();});
+			if( is_full() ){ 
+				// If queue is empty, sleep the thread until
+				// either the queue closes or there is room
+				// to push something into the queue
+				pushreq.wait(halt, [this](){return is_closed() || !is_full();});
+			}
 
 			if( is_closed() ){
 				return status::closed;
@@ -89,8 +92,11 @@ public:
 			// Grab the mutex
 			std::unique_lock halt(qutex);
 
-			// Wait until there is something to pop
-			popreq.wait(halt, [this](){return !is_empty();});
+			if( is_empty() ){
+				// If queue is empty, wait until
+				// there is something to pop
+				popreq.wait(halt, [this](){return !is_empty();});
+			}
 
 			// Storage value in x
 			x = storage.front();
