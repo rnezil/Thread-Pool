@@ -23,7 +23,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 #Add executable target
 add_executable(test_queue ${CMAKE_CURRENT_SOURCE_DIR}/app/test_queue.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/ra/queue.hpp)
+add_executable(test_thread_pool ${CMAKE_CURRENT_SOURCE_DIR}/app/test_thread_pool.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/ra/thread_pool.hpp)
+
+#Add library target
+add_library(thread_pool ${CMAKE_CURRENT_SOURCE_DIR}/lib/thread_pool.cpp)
 
 #Link against Threads library
 target_link_libraries(test_queue Threads::Threads)
+target_link_libraries(test_thread_pool Threads::Threads thread_pool)
 
