@@ -1,5 +1,5 @@
 #include "ra/queue.hpp"
-#include <thread>
+#include <functional>
 
 namespace ra::concurrency {
 
@@ -26,10 +26,17 @@ public:
 	void shutdown();
 
 	bool is_shutdown() const;
+
+	void cleanup();
 private:
-	bool off_;
 	size_type size_;
-	queue<std::thread> pool_;
+	queue<std::function<void()>> jobs_;
+	std::vector<std::thread> pool_;
+	bool shutdown_;
+	std::mutex m_;
+	std::condition_variable c_;
+	std::vector<bool> thread_is_idle_;
+	int current_;
 };
 
 }
