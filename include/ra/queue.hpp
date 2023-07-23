@@ -2,6 +2,7 @@
 #include <mutex>
 #include <queue>
 #include <condition_variable>
+#include <utility>
 
 namespace ra::concurrency {
 
@@ -34,20 +35,25 @@ public:
 	queue& operator=( queue&& ) = delete;
 
 	~queue(){
-		if( !closed )
-			closed = true;
+		// Take the mutex
+		std::unique_lock halt(qutex);
 
+		// Close queue if not already closed
+		if( !closed )
+			close();
+
+		// Clear out underlying data structure
 		while( !storage.empty() )
 			storage.pop();
 	}
 
 	status push( value_type&& x ){
+		// Take the mutex
+		std::unique_lock halt(qutex);
+
 		if( is_closed() ){
 			return status::closed;
 		}else{
-			// Take the mutex
-			std::unique_lock halt(qutex);
-
 			if( is_full() ){ 
 				// If queue is empty, sleep the thread until
 				// either the queue closes or there is room
@@ -70,36 +76,36 @@ public:
 	}
 
 	status pop( value_type& x ){
+		// Grab the mutex
+		std::unique_lock halt(qutex);
+
 		if( is_closed() ){
 			if( is_empty() ){
 				return status::closed;
 			}else{
-				// Grab the mutex
-				std::unique_lock halt(qutex);
-
 				// Place value in x
-				x = storage.front();
+				x = std::move(storage.front());
 
 				// Pop it
 				storage.pop();
 
-				// Notify pusher
-				pushreq.notify_one();
-
 				return status::success;
 			}
 		}else{
-			// Grab the mutex
-			std::unique_lock halt(qutex);
-
 			if( is_empty() ){
 				// If queue is empty, wait until
 				// there is something to pop
-				popreq.wait(halt, [this](){return !is_empty();});
+				popreq.wait(halt, [this](){return !is_empty() || is_closed();});
+
+				// If the queue has been closed
+				// since the wait began and is
+				// empty then just leave
+				if( is_empty() && is_closed() )
+					return status::closed;
 			}
 
 			// Storage value in x
-			x = storage.front();
+			x = std::move(storage.front());
 
 			// Pop it
 			storage.pop();
@@ -112,12 +118,16 @@ public:
 	}
 
 	void close(){
-		if( !is_closed() ){
-			// Grab the mutex
-			std::unique_lock halt(qutex);
+		// Grab the mutex
+		std::unique_lock halt(qutex);
 
+		if( !is_closed() ){
 			// Close the queue
 			closed = true;
+
+			// Notify anyone waiting to pop
+			// that the queue is now closed
+			popreq.notify_all();
 		}
 	}
 
@@ -143,7 +153,7 @@ public:
 
 	bool is_full() const { return storage.size() == capacity; }
 
-	bool is_empty() const { return storage.size() == 0; }
+	bool is_empty() const { return !storage.size(); }
 
 	bool is_closed() const { return closed; }
 
