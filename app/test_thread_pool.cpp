@@ -5,16 +5,10 @@ using namespace ra::concurrency;
 
 void create_default(){
 	thread_pool a;
-	std::cout << a.size() << '\n';
 }
 
 void create_parametrized(){
 	thread_pool b(8);
-	std::cout << b.size() << '\n';
-}
-
-void job(){
-	std::cout << "workin the job\n";
 }
 
 int main(){
@@ -22,6 +16,10 @@ int main(){
 	std::cout << "Default thread pool created and destroyed.\n";
 	create_parametrized();
 	std::cout << "Parametrized thread pool created and destroyed.\n";
+	thread_pool test;
+	for( unsigned i = 0; i < 128; ++i )
+		test.schedule( [i](){std::cout << i << ' ';} );
+	test.shutdown();
 	
 	return 0;
 }

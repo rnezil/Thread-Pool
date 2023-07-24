@@ -1,9 +1,9 @@
 #include "ra/thread_pool.hpp"
+#include <iostream>
 
 namespace ra::concurrency {
 
-	thread_pool::thread_pool(): shutdown_(false), joining_(false), jobs_(256), pool_ {},
-	       clean_(false), shutting_down_(false) {
+	thread_pool::thread_pool(): shutdown_(false), joining_(false), jobs_(256), pool_ {} {
 		unsigned num_supported = std::thread::hardware_concurrency();
 		if( num_supported ){
 			size_ = num_supported;
@@ -17,8 +17,7 @@ namespace ra::concurrency {
 	}
 
 	thread_pool::thread_pool( std::size_t num_threads ): size_(num_threads),
-	shutdown_(false), joining_(false), jobs_(256), pool_ {},
-	clean_(false), shutting_down_(false) {
+	shutdown_(false), joining_(false), jobs_(256), pool_ {} {	
 		for( unsigned i = num_threads; i; --i )
 			pool_.emplace_back( std::thread() );
 	}
@@ -36,7 +35,8 @@ namespace ra::concurrency {
 		// full. Therefore, schedule
 		// function itself effectively
 		// blocks if job queue is full
-		jobs_.push( std::move(func) );
+		if( jobs_.push( std::move(func) ) == queue<std::function<void()>>::status::closed )
+			return;
 
 		// Grab the mutex
 		std::unique_lock lock(m_);
@@ -71,80 +71,37 @@ namespace ra::concurrency {
 	void thread_pool::shutdown() {
 		// Stop accepting new jobs
 		jobs_.close();
-
+		
 		// Grab the mutex
 		std::unique_lock lock(m_);
 
 		// Shutdown protocol
-		if( !shutting_down_ ){
-			// Indicate that thread pool is
-			// in the process of shutting down
-			shutting_down_ = true;
-
-			// Temporary variables
-			bool cleanup_worker_available = false;
-			unsigned cleanup_worker_number;
-
-			// Block while worker cleans up
-			for( unsigned i = 0; i < size_; ++i ){
-				if( !pool_.at(i).joinable() ){
-					pool_.at(i) = std::thread(
-							&thread_pool::cleanup, this);
-					cleanup_worker_available = true;
-					cleanup_worker_number = i;
-					break;
+		if( !is_shutdown() ){
+			// Finish all jobs
+			while( !jobs_.is_empty() ){
+				for( unsigned i = 0; i < size_; ++i ){
+					if( !pool_.at(i).joinable() ){
+						std::function<void()> job;
+						jobs_.pop(job); 
+						pool_.at(i) = std::thread(job);
+					}
 				}
+
+				for( unsigned i = 0; i < size_; ++i )
+					if( pool_.at(i).joinable() )
+						pool_.at(i).join();
 			}
 
-			if( !cleanup_worker_available ){
-				cleanup_worker_number = 0;
-				pool_.at(0).join();
-				pool_.at(0) = std::thread(
-						&thread_pool::cleanup, this);
-			}
+			// Ensure all workers are joined
+			for( unsigned i = 0; i < size_; ++i )
+				if( pool_.at(i).joinable() )
+					pool_.at(i).join();
 
-			c_.wait(lock, [this](){return is_clean();});
-
-			// Shutdown cleanup worker thread
-			pool_.at(cleanup_worker_number).join();
-
-			// Place thread pool in shutdown state
+			// Place thread in shutdown state
 			shutdown_ = true;
 		}
 	}
 
 	bool thread_pool::is_shutdown() const { return shutdown_; }
-
-	void thread_pool::cleanup() {
-		// Complete all jobs
-		unsigned i = 1;
-		while( !jobs_.is_empty() ){
-			if( !pool_.at(i).joinable() ){
-				std::function<void()> job;
-				jobs_.pop(job);
-				pool_.at(i) = std::thread(job);
-			}else{
-				pool_.at(i).join();
-			}
-
-			++i;
-			if( i == size_ )
-				i = 1;
-		}
-
-		// Join all workers
-		i = 1;
-		for( i; i < size_; ++i ){
-			if( pool_.at(i).joinable() ){
-				pool_.at(i).join();
-			}
-		}
-
-		// Indicate cleanliness and exit
-		clean_ = true;
-		c_.notify_all();
-	}
-
-	bool thread_pool::is_clean() const { return clean_; }
 }
 

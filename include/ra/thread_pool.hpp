@@ -30,14 +30,10 @@ private:
 	size_type size_;
 	bool shutdown_;
 	bool joining_;
-	bool clean_;
-	bool shutting_down_;
 	queue<std::function<void()>> jobs_;
 	std::vector<std::thread> pool_;
 	std::mutex m_;
 	std::condition_variable c_;
-	void cleanup();
-	bool is_clean() const;
 };
 
 }

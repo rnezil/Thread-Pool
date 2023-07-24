@@ -18,6 +18,9 @@ find_package(Catch2 REQUIRED)
 #Include Catch header
 include(Catch)
 
+#Include thread sanitizer option
+include(${CMAKE_CURRENT_SOURCE_DIR}/Sanitizers.cmake)
+
 #Globally include 'include' directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
