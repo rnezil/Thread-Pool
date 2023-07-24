@@ -139,7 +139,7 @@ public:
 		int size = storage.size();
 
 		// Clear the queue
-		while( !storage.empty )
+		while( !storage.empty() )
 			storage.pop();
 
 		// Notify pusher(s)
