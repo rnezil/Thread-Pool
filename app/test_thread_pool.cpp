@@ -17,8 +17,8 @@ int main(){
 	create_parametrized();
 	std::cout << "Parametrized thread pool created and destroyed.\n";
 	thread_pool test;
-	for( unsigned i = 0; i < 128; ++i )
-		test.schedule( [i](){std::cout << i << ' ';} );
+	for( unsigned i = 0; i < 4000; ++i )
+		test.schedule( [i](){std::cout << i << '\n';} );
 	test.shutdown();
 	
 	return 0;

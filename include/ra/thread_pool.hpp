@@ -33,7 +33,6 @@ private:
 	queue<std::function<void()>> jobs_;
 	std::vector<std::thread> pool_;
 	std::mutex m_;
-	std::condition_variable c_;
 };
 
 }

@@ -1,5 +1,4 @@
 #include "ra/thread_pool.hpp"
-#include <iostream>
 
 namespace ra::concurrency {
 
@@ -30,6 +29,24 @@ namespace ra::concurrency {
 	thread_pool::size_type thread_pool::size() const { return size_; }
 
 	void thread_pool::schedule( std::function<void()>&& func ) {
+		// Grab the mutex
+		std::unique_lock lock(m_);
+
+		// Full job queue protocol
+		if( jobs_.is_full() ){
+			for( unsigned i = 0; i < size_; ++i ){
+				if( pool_.at(i).joinable() ){
+					pool_.at(i).join();
+					std::function<void()> job;
+					jobs_.pop(job); 
+					pool_.at(i) = std::thread(job);
+				}
+			}
+		}
+
+		// Drop the mutex
+		lock.unlock();
+
 		// This function automatically
 		// blocks if the job queue is
 		// full. Therefore, schedule
@@ -38,8 +55,8 @@ namespace ra::concurrency {
 		if( jobs_.push( std::move(func) ) == queue<std::function<void()>>::status::closed )
 			return;
 
-		// Grab the mutex
-		std::unique_lock lock(m_);
+		// Pick the mutex back up
+		lock.lock();
 
 		// Assign as many jobs as possible
 		for( unsigned i = 0; i < size_; ++i ){
