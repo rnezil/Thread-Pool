@@ -2,7 +2,7 @@
 
 namespace ra::concurrency {
 
-	thread_pool::thread_pool(): shutdown_(false), joining_(false), jobs_(256), pool_ {} {
+	thread_pool::thread_pool(): shutdown_(false), joining_(false), jobs_(256), pool_ {}, qd_(0) {
 		unsigned num_supported = std::thread::hardware_concurrency();
 		if( num_supported ){
 			size_ = num_supported;
@@ -16,7 +16,7 @@ namespace ra::concurrency {
 	}
 
 	thread_pool::thread_pool( std::size_t num_threads ): size_(num_threads),
-	shutdown_(false), joining_(false), jobs_(256), pool_ {} {	
+	shutdown_(false), joining_(false), jobs_(256), pool_ {}, qd_(0) {	
 		for( unsigned i = num_threads; i; --i )
 			pool_.emplace_back( std::thread() );
 	}
@@ -33,14 +33,16 @@ namespace ra::concurrency {
 		std::unique_lock lock(m_);
 
 		// Full job queue protocol
-		if( jobs_.is_full() ){
+		if( qd_ == 255 ){
 			for( unsigned i = 0; i < size_; ++i ){
 				if( pool_.at(i).joinable() ){
 					pool_.at(i).join();
 					std::function<void()> job;
 					jobs_.pop(job); 
 					pool_.at(i) = std::thread(job);
+					--qd_;
 				}
+
 			}
 		}
 
@@ -58,6 +60,9 @@ namespace ra::concurrency {
 		// Pick the mutex back up
 		lock.lock();
 
+		// Tally queue'd job
+		++qd_;
+
 		// Assign as many jobs as possible
 		for( unsigned i = 0; i < size_; ++i ){
 			if( !pool_.at(i).joinable() ){
@@ -65,6 +70,7 @@ namespace ra::concurrency {
 				std::function<void()> job;
 				jobs_.pop(job); 
 				pool_.at(i) = std::thread(job);
+				--qd_;
 				return;
 			}
 		}
@@ -88,19 +94,24 @@ namespace ra::concurrency {
 	void thread_pool::shutdown() {
 		// Stop accepting new jobs
 		jobs_.close();
-		
+
 		// Grab the mutex
 		std::unique_lock lock(m_);
 
 		// Shutdown protocol
 		if( !is_shutdown() ){
 			// Finish all jobs
-			while( !jobs_.is_empty() ){
+			std::function<void()> job;
+			while( qd_ ){
 				for( unsigned i = 0; i < size_; ++i ){
 					if( !pool_.at(i).joinable() ){
 						std::function<void()> job;
-						jobs_.pop(job); 
-						pool_.at(i) = std::thread(job);
+						if( jobs_.pop(job) == queue<
+								std::function<
+								void()>>::status::success ){
+							pool_.at(i) = std::thread(job);
+							--qd_;
+						}
 					}
 				}
 

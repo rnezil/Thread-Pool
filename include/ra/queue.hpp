@@ -65,7 +65,7 @@ public:
 			}else{
 				// Do the operation
 				storage.emplace(x);
-				
+
 				// Notify popper
 				popreq.notify_one();
 
@@ -138,8 +138,8 @@ public:
 		// Grab the mutex
 		std::unique_lock halt(qutex);
 
-		// Record size before clearing
-		int size = storage.size();
+		// Record current size
+		size_type size = storage.size();
 
 		// Clear the queue
 		while( !storage.empty() )

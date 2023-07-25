@@ -33,6 +33,7 @@ private:
 	queue<std::function<void()>> jobs_;
 	std::vector<std::thread> pool_;
 	mutable std::mutex m_;
+	int qd_;
 };
 
 }
