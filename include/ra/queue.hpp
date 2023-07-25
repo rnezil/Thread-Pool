@@ -35,16 +35,15 @@ public:
 	queue& operator=( queue&& ) = delete;
 
 	~queue(){
-		// Take the mutex
-		std::unique_lock halt(qutex);
-
 		// Close queue if not already closed
-		if( !closed )
+		if( !is_closed() ){
 			close();
+		}
 
 		// Clear out underlying data structure
-		while( !storage.empty() )
+		while( !storage.empty() ){
 			storage.pop();
+		}
 	}
 
 	status push( value_type&& x ){
@@ -128,6 +127,10 @@ public:
 			// Notify anyone waiting to pop
 			// that the queue is now closed
 			popreq.notify_all();
+
+			// Notify anyone trying to push
+			// that the queue is now closed
+			pushreq.notify_all();
 		}
 	}
 

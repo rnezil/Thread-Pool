@@ -32,7 +32,7 @@ private:
 	bool joining_;
 	queue<std::function<void()>> jobs_;
 	std::vector<std::thread> pool_;
-	std::mutex m_;
+	mutable std::mutex m_;
 };
 
 }
