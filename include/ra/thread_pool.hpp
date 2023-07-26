@@ -29,11 +29,9 @@ public:
 private:
 	size_type size_;
 	bool shutdown_;
-	bool joining_;
 	queue<std::function<void()>> jobs_;
 	std::vector<std::thread> pool_;
 	mutable std::mutex m_;
-	int qd_;
 };
 
 }

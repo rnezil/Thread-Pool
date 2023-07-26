@@ -35,7 +35,7 @@ add_executable(test_julia_set ${CMAKE_CURRENT_SOURCE_DIR}/app/test_julia_set.cpp
 target_include_directories(test_julia_set PUBLIC Boost::multi_array)
 
 #Add library target
-add_library(thread_pool ${CMAKE_CURRENT_SOURCE_DIR}/lib/thread_pool.cpp)
+add_library(thread_pool ${CMAKE_CURRENT_SOURCE_DIR}/lib/thread_pool_v2.cpp)
 
 #Link against Threads library
 target_link_libraries(test_queue Threads::Threads)
