@@ -1,4 +1,3 @@
-#define GNUMB 1000
 #define CATCH_CONFIG_MAIN
 
 #include "ra/queue.hpp"
