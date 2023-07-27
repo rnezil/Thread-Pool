@@ -10,15 +10,15 @@ int main() {
 	int H = 512;
 	int sample = 255;
 	boost::multi_array<int, 2> a( boost::extents[H][W] );
-	/*ra::fractal::compute_julia_set( bot, top, c, sample, a, 4 );
+/*	ra::fractal::compute_julia_set( bot, top, c, sample, a, 4 );
 	std::cout << "P2 " << W << ' ' << H << ' ' << sample << '\n';
 	for( int m = H; m; --m ){
 		for( int n = 0; n < W; ++n ){
 			std::cout << a[m-1][n] << ' ';
 		}
 		std::cout << '\n';
-	}*/
-
+	}
+*/
 
 
 	boost::multi_array<int, 2> one( boost::extents[H][W] );
